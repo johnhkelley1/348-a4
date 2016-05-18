@@ -17,8 +17,9 @@ class Bayes_Classifier:
    def train(self):   
       """Trains the Naive Bayes Sentiment Classifier."""
       freq_dist = self.getFreqDist()
+      prob_dist = self.probDist(freq_dist)
 
-      print freq_dist
+      print prob_dist
 
    def getFreqDist(self):
       os.chdir("movies_reviews")
@@ -47,6 +48,14 @@ class Bayes_Classifier:
             else:
                freq_dist[token] = {'good':0,'bad':1}
       return freq_dist
+
+   def probDist(self, freq_dist):
+      prob_dist = {}
+      for key in freq_dist:
+         prob_dist[key] = float(freq_dist[key]['good']) / float(freq_dist[key]['good'] + freq_dist[key]['bad'])
+
+      return prob_dist
+         
 
     
    def classify(self, sText):
