@@ -17,15 +17,20 @@ class Bayes_Classifier:
    def train(self):   
       """Trains the Naive Bayes Sentiment Classifier."""
       freq_dist = self.getFreqDist()
-      prob_dist = self.probDist(freq_dist)
 
-      print prob_dist
+      self.freq_dist = freq_dist
 
    def getFreqDist(self):
       os.chdir("movies_reviews")
       freq_dist = {}
-      for review in glob.glob("movies-5*.txt"):
+      num_good = 0
 
+      good_reviews = glob.glob("movies-5*.txt")
+
+      good_reviews = good_reviews[:int(len(good_reviews)*.9)]
+
+      for review in good_reviews:
+         num_good += 1
          review = self.loadFile(review)
          review = self.tokenize(review)
          review = [s.lower() for s in review]
@@ -36,7 +41,14 @@ class Bayes_Classifier:
             else:
                freq_dist[token] = {'good':1,'bad':0}
 
-      for review in glob.glob("movies-1*.txt"):
+      num_bad = 0
+
+      bad_reviews = glob.glob("movies-1*.txt")
+
+      bad_reviews = bad_reviews[:int(len(bad_reviews)*.9)]
+
+      for review in bad_reviews:
+         num_bad +=1
 
          review = self.loadFile(review)
          review = self.tokenize(review)
@@ -47,14 +59,13 @@ class Bayes_Classifier:
                freq_dist[token]['bad'] += 1
             else:
                freq_dist[token] = {'good':0,'bad':1}
-      return freq_dist
+      freq_dist = {"num_good":num_good,"num_bad":num_bad,"freq_dist":freq_dist}
 
-   def probDist(self, freq_dist):
       prob_dist = {}
-      for key in freq_dist:
-         prob_dist[key] = float(freq_dist[key]['good']) / float(freq_dist[key]['good'] + freq_dist[key]['bad'])
+      for key in freq_dist['freq_dist']:
+         freq_dist['freq_dist'][key]['pwgg'] = float(freq_dist['freq_dist'][key]['good']) / float(freq_dist['num_good'])
 
-      return prob_dist
+      return freq_dist
          
 
     
@@ -62,6 +73,38 @@ class Bayes_Classifier:
       """Given a target string sText, this function returns the most likely document
       class to which the target string belongs (i.e., positive, negative or neutral).
       """
+      words = self.tokenize(sText)
+      words = [s.lower() for s in words]
+      words = set(words)
+
+      num_docs = self.freq_dist['num_good'] + self.freq_dist['num_bad']
+      num = 0
+      den = 0
+      for word in words:
+         if word in self.freq_dist['freq_dist']:
+            pwgg = self.freq_dist['freq_dist'][word]['pwgg']
+            if pwgg != 0:
+               pwgg = math.log(pwgg)
+            pw = float(self.freq_dist['freq_dist'][word]['good'] + self.freq_dist['freq_dist'][word]['bad']) / float(num_docs)
+            if pw != 0:
+               pw = math.log(pw)
+
+            num += pwgg
+            den += pw
+
+      if num == 0 or den == 0:
+         return -1
+
+      print "num" + str(num)
+      print "den" + str(den)
+
+      tot = num*float(self.freq_dist['num_good'])/num_docs
+
+      tot = tot / den
+
+      print tot
+
+
 
    def loadFile(self, sFilename):
       """Given a file name, return the contents of the file as a string."""
@@ -111,4 +154,5 @@ class Bayes_Classifier:
 
 abayes = Bayes_Classifier()
 abayes.train()
+abayes.classify("this is a fantastic review")
 
