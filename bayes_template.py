@@ -3,12 +3,17 @@
 # Description:
 #
 #
+# NetIDs:
+# jhk192
+# dkm840
+# nlp412
 
-import math, os, pickle, re, glob
+import math, os, pickle, re, glob, nltk
 
 class Bayes_Classifier:
 
    def __init__(self):
+      os.chdir("movies_reviews")
       """This method initializes and trains the Naive Bayes Sentiment Classifier.  If a 
       cache of a trained classifier has been stored, it loads this cache.  Otherwise, 
       the system will proceed through training.  After running this method, the classifier 
@@ -16,18 +21,28 @@ class Bayes_Classifier:
 
    def train(self):   
       """Trains the Naive Bayes Sentiment Classifier."""
-      freq_dist = self.getFreqDist()
+      freq_dist = self.getFreqDist(.9)
 
       self.freq_dist = freq_dist
 
-   def getFreqDist(self):
-      os.chdir("movies_reviews")
+   def getFreqDist(self,v_start):
+
+
       freq_dist = {}
       num_good = 0
 
       good_reviews = glob.glob("movies-5*.txt")
 
-      good_reviews = good_reviews[:int(len(good_reviews)*.9)]
+      good_reviews_full = good_reviews
+
+      good_reviews = good_reviews[:int(len(good_reviews)*v_start)]
+
+      if v_start < .9:
+         t2_start = v_start + 0.1
+         good_reviews_full = good_reviews_full[int(-t2_start*len(good_reviews_full)):]
+         good_reviews = good_reviews + good_reviews_full
+
+
 
       for review in good_reviews:
          num_good += 1
@@ -45,7 +60,13 @@ class Bayes_Classifier:
 
       bad_reviews = glob.glob("movies-1*.txt")
 
-      bad_reviews = bad_reviews[:int(len(bad_reviews)*.9)]
+      bad_reviews_full = bad_reviews
+
+      bad_reviews = bad_reviews[:int(len(bad_reviews)*v_start)]
+
+      if v_start < .9:
+         bad_reviews_full = bad_reviews_full[int(-t2_start*len(bad_reviews_full)):]
+         bad_reviews = bad_reviews + bad_reviews_full
 
       for review in bad_reviews:
          num_bad +=1
@@ -109,7 +130,9 @@ class Bayes_Classifier:
          res = self.classify(review)
          num_good += res
 
-      print "good ",float(num_good) / float(tot)
+      print "recall good ",float(num_good) / float(tot)
+
+      tot_good = tot
 
 
       bad_reviews = glob.glob("movies-1*.txt")
@@ -125,7 +148,62 @@ class Bayes_Classifier:
          if res == 0:
             num_bad += 1
 
-      print "bad ",float(num_bad) / float(tot)
+      pres_good = float(num_good) / float(num_good +  float(tot - num_bad))
+
+      pres_bad = float(num_bad) / float(num_bad +  float(tot_good - num_good))
+
+      print "recall bad ",float(num_bad) / float(tot)
+
+      print "pres good ",pres_good
+      print "pres bad ",pres_bad
+
+      f_good = 2*(pres_good*num_good)/(pres_good+num_good)
+      f_bad = 2*(pres_bad*num_bad)/(pres_bad+num_bad)
+
+      print "f good ",f_good
+      print "f bad ",f_bad
+
+      ret = {"rec_good":float(num_good),"rec_bad":float(num_bad),"pres_good":pres_good,"pres_bad":pres_bad,"f_good":f_good,"f_bad":f_bad}
+
+      return ret
+
+
+   def crossValidation(self):
+      aves = []
+      for i in range(10):
+         print "ITERATION ",i
+         freq_dist = self.getFreqDist(float(i)/10.0)
+         self.freq_dist = freq_dist
+         aves.append(abayes.test())
+
+      rec_good_ave = 0
+      rec_bad_ave = 0
+      pres_good_ave = 0
+      pres_bad_ave = 0
+      f_good_ave = 0
+      f_bad_ave = 0
+
+      for item in aves:
+         rec_good_ave += item['rec_good']
+         rec_bad_ave += item['rec_bad']
+         pres_good_ave += item['pres_good']
+         pres_bad_ave += item['pres_bad']
+         f_good_ave += item['f_good']
+         f_bad_ave += item['f_bad']
+
+      rec_good_ave /= 10
+      rec_bad_ave /= 10
+      pres_good_ave /= 10
+      pres_bad_ave /= 10
+      f_good_ave /= 10
+      f_bad_ave /= 10
+
+      print rec_good_ave
+      print rec_bad_ave
+      print pres_good_ave
+      print pres_bad_ave
+      print f_good_ave
+      print f_bad_ave
 
 
 
@@ -176,7 +254,8 @@ class Bayes_Classifier:
       return lTokens
 
 abayes = Bayes_Classifier()
-abayes.train()
-abayes.test()
-abayes.classify("this is a fantastic review")
+# abayes.train()
+# abayes.test()
+# abayes.classify("this is a fantastic review")
+abayes.crossValidation()
 
