@@ -78,31 +78,54 @@ class Bayes_Classifier:
       words = set(words)
 
       num_docs = self.freq_dist['num_good'] + self.freq_dist['num_bad']
-      num = 0
-      den = 0
+
+      prob_neg = 0
+      prob_pos = 0
+
       for word in words:
          if word in self.freq_dist['freq_dist']:
-            pwgg = self.freq_dist['freq_dist'][word]['pwgg']
-            if pwgg != 0:
-               pwgg = math.log(pwgg)
-            pw = float(self.freq_dist['freq_dist'][word]['good'] + self.freq_dist['freq_dist'][word]['bad']) / float(num_docs)
-            if pw != 0:
-               pw = math.log(pw)
+            prob_neg += math.log( (self.freq_dist['freq_dist'][word]['bad']+1) / 0.175 )
 
-            num += pwgg
-            den += pw
+            prob_pos += math.log( (self.freq_dist['freq_dist'][word]['good']+1) / 0.825 )
 
-      if num == 0 or den == 0:
-         return -1
+      prob_pos = abs(prob_pos)
+      prob_neg = abs(prob_neg)
+      if prob_pos > prob_neg:
+         return 1
+      return 0
 
-      print "num" + str(num)
-      print "den" + str(den)
 
-      tot = num*float(self.freq_dist['num_good'])/num_docs
+   def test(self):
 
-      tot = tot / den
+      good_reviews = glob.glob("movies-5*.txt")
 
-      print tot
+      good_reviews = good_reviews[-int(len(good_reviews)*.9):]
+
+      tot = 0
+      num_good = 0
+      for review in good_reviews:
+         tot += 1
+         review = self.loadFile(review)
+         res = self.classify(review)
+         num_good += res
+
+      print "good ",float(num_good) / float(tot)
+
+
+      bad_reviews = glob.glob("movies-1*.txt")
+
+      bad_reviews = bad_reviews[-int(len(bad_reviews)*.9):]
+
+      tot = 0
+      num_bad = 0
+      for review in bad_reviews:
+         tot += 1
+         review = self.loadFile(review)
+         res = self.classify(review)
+         if res == 0:
+            num_bad += 1
+
+      print "bad ",float(num_bad) / float(tot)
 
 
 
@@ -154,5 +177,6 @@ class Bayes_Classifier:
 
 abayes = Bayes_Classifier()
 abayes.train()
+abayes.test()
 abayes.classify("this is a fantastic review")
 
